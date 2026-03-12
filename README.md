@@ -72,8 +72,20 @@ This is intentionally framework-light. The current implementation keeps orchestr
 ```text
 .
 ├── docs/
+│   ├── architecture.md
+│   ├── baseline-comparison.md
+│   ├── deployment.md
 │   ├── execution-plan.md
+│   ├── evaluation-rubric.md
+│   ├── github-metadata.md
 │   └── license-strategy.md
+├── examples/
+│   └── demo_cases/
+│       ├── ai-interview-coach.md
+│       ├── campus-secondhand-marketplace.md
+│       ├── crossborder-product-selection.md
+│       └── README.md
+├── render.yaml
 ├── src/
 │   └── intelligent_brain_company/
 │       ├── api/
@@ -95,6 +107,7 @@ This is intentionally framework-light. The current implementation keeps orchestr
 │       │   ├── planning.py
 │       │   ├── project_store.py
 │       │   └── task_store.py
+│       ├── wsgi.py
 │       ├── workflows/
 │       │   └── pipeline.py
 │       └── __init__.py
@@ -147,6 +160,15 @@ The built-in console presets are designed to make the product legible within a m
 3. Campus second-hand marketplace.
 
 These presets are meant to show the full product loop fast: create project, generate plan, inspect scorecard, question a department, promote a chat turn, and compare versions.
+
+## Docs And Assets
+
+- Deployment: docs/deployment.md
+- Baseline comparison: docs/baseline-comparison.md
+- Evaluation rubric: docs/evaluation-rubric.md
+- Architecture: docs/architecture.md
+- GitHub metadata: docs/github-metadata.md
+- Demo cases: examples/demo_cases/
 
 If you want live LLM-backed research, board, and department reviews, set these environment variables before starting the API:
 

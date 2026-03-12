@@ -14,7 +14,8 @@ authors = [
 ]
 keywords = ["agents", "ai", "orchestration", "planning", "multi-agent"]
 dependencies = [
-  "Flask>=3.0"
+  "Flask>=3.0",
+  "gunicorn>=23.0; platform_system != 'Windows'"
 ]
 classifiers = [
   "Development Status :: 3 - Alpha",

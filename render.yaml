@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: intelligent-brain-company
+    runtime: python
+    plan: free
+    buildCommand: pip install -e .
+    startCommand: gunicorn --bind 0.0.0.0:$PORT intelligent_brain_company.wsgi:app
+    envVars:
+      - key: IBC_HOST
+        value: 0.0.0.0
+      - key: IBC_PORT
+        value: 10000
+      - key: IBC_DATA_DIR
+        value: /var/data/ibc
