@@ -34,6 +34,39 @@ const NEXT_STAGE_ACTION = {
   board: '已完成全部环节',
 }
 
+const AGENT_PROFILES = {
+  research: { name: '研究组', avatar: '研', hue: 198 },
+  board: { name: '董事会', avatar: '董', hue: 16 },
+  hardware: { name: '硬件组', avatar: '硬', hue: 32 },
+  software: { name: '软件组', avatar: '软', hue: 220 },
+  design: { name: '设计组', avatar: '设', hue: 284 },
+  marketing: { name: '营销组', avatar: '营', hue: 138 },
+  finance: { name: '财务组', avatar: '财', hue: 50 },
+}
+
+const USER_PROFILE = { name: '你', avatar: '你', hue: 188 }
+
+function profileByAgent(agent) {
+  return AGENT_PROFILES[agent] || { name: agent, avatar: String(agent || '?').slice(0, 1), hue: 210 }
+}
+
+function escapeHtml(text) {
+  return String(text || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function formatChatBody(text) {
+  return escapeHtml(text).replace(/\n/g, '<br>')
+}
+
+function avatarStyle(profile) {
+  return `--avatar-hue: ${profile.hue};`
+}
+
 function updateGenerateButton(project) {
   const action = NEXT_STAGE_ACTION[project.current_stage] || '执行下一环节'
   generatePlanButton.textContent = action
@@ -220,33 +253,55 @@ function renderDiffSelectors(plans) {
 }
 
 function renderChat(agent, history) {
+  const agentProfile = profileByAgent(agent)
   chatHistory.innerHTML = ''
   if (!history.length) {
-    chatHistory.innerHTML = '<div class="chat-bubble agent"><div class="chat-role">系统</div><div>当前角色还没有对话记录。</div></div>'
+    chatHistory.innerHTML = `
+      <div class="chat-row incoming">
+        <div class="chat-avatar" style="${avatarStyle(agentProfile)}">${escapeHtml(agentProfile.avatar)}</div>
+        <div class="chat-bubble agent">
+          <div class="chat-bubble-head">
+            <span class="chat-role">${escapeHtml(agentProfile.name)}</span>
+          </div>
+          <div class="chat-message">当前角色还没有对话记录。</div>
+        </div>
+      </div>
+    `
     return
   }
 
   history.forEach((turn) => {
-    const user = document.createElement('div')
-    user.className = 'chat-bubble user'
-    user.innerHTML = `
-      <div class="chat-role">你 -> ${agent}</div>
-      <div>${turn.user_message}</div>
-      <div class="chat-meta">${new Date(turn.created_at).toLocaleString()}</div>
+    const userRow = document.createElement('div')
+    userRow.className = 'chat-row outgoing'
+    userRow.innerHTML = `
+      <div class="chat-bubble user">
+        <div class="chat-bubble-head">
+          <span class="chat-role">${escapeHtml(USER_PROFILE.name)}</span>
+          <span class="chat-time">${new Date(turn.created_at).toLocaleString()}</span>
+        </div>
+        <div class="chat-message">${formatChatBody(turn.user_message)}</div>
+      </div>
+      <div class="chat-avatar" style="${avatarStyle(USER_PROFILE)}">${escapeHtml(USER_PROFILE.avatar)}</div>
     `
-    chatHistory.appendChild(user)
+    chatHistory.appendChild(userRow)
 
     const reply = document.createElement('div')
-    reply.className = 'chat-bubble agent'
+    reply.className = 'chat-row incoming'
     const promoteButton = turn.can_promote_to_intervention
       ? `<div class="chat-actions"><button class="chat-promote" data-turn-id="${turn.turn_id}">转成正式干预并重算</button></div>`
       : ''
     reply.innerHTML = `
-      <div class="chat-role">${agent}</div>
-      <div>${turn.assistant_message}</div>
-      <div class="chat-meta">${turn.used_llm ? 'LLM' : 'Fallback'} · ${new Date(turn.created_at).toLocaleString()}</div>
-      <div class="chat-meta">建议阶段: ${turn.suggested_stage} · 建议影响: ${turn.suggested_impact}</div>
-      ${promoteButton}
+      <div class="chat-avatar" style="${avatarStyle(agentProfile)}">${escapeHtml(agentProfile.avatar)}</div>
+      <div class="chat-bubble agent">
+        <div class="chat-bubble-head">
+          <span class="chat-role">${escapeHtml(agentProfile.name)}</span>
+          <span class="chat-time">${new Date(turn.created_at).toLocaleString()}</span>
+        </div>
+        <div class="chat-message">${formatChatBody(turn.assistant_message)}</div>
+        <div class="chat-meta">${turn.used_llm ? 'LLM' : 'Fallback'} · 建议阶段 ${escapeHtml(turn.suggested_stage)}</div>
+        <div class="chat-meta">建议影响: ${escapeHtml(turn.suggested_impact)}</div>
+        ${promoteButton}
+      </div>
     `
     chatHistory.appendChild(reply)
   })
@@ -367,6 +422,7 @@ document.getElementById('chat-form').addEventListener('submit', async (event) =>
   const message = messageField.value.trim()
   if (!message) return
   const agent = chatAgentSelect.value
+  chatStatus.textContent = '正在发送消息...'
   const data = await api(`/api/projects/${state.activeProject.project_id}/chat`, {
     method: 'POST',
     body: JSON.stringify({ agent, message }),
