@@ -101,4 +101,4 @@ Success metrics:
 - Prompt-only orchestration will become brittle without typed outputs.
 - Cross-department discussion can spiral unless the workflow enforces scope.
 - Full openness to user intervention requires dependency-aware recomputation.
-- AGPL may reduce adoption if the intended product is a hosted SaaS platform.
+- A permissive license improves adoption but increases the need to differentiate through hosted execution, evaluations, and product UX.

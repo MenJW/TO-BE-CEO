@@ -49,6 +49,9 @@ def deserialize_department_solution(data: dict[str, Any]) -> DepartmentSolution:
         feasibility_score=data["feasibility_score"],
         dependencies=[Department(item) for item in data.get("dependencies", [])],
         assumptions=data.get("assumptions", []),
+        rationale=data.get("rationale", ""),
+        implementation_steps=data.get("implementation_steps", []),
+        success_metrics=data.get("success_metrics", []),
     )
 
 
@@ -104,6 +107,38 @@ class TaskStatus(str, Enum):
 
 
 @dataclass(slots=True)
+class ConversationTurn:
+    agent: str
+    user_message: str
+    assistant_message: str
+    created_at: str
+    used_llm: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "ConversationTurn":
+        return cls(
+            agent=data["agent"],
+            user_message=data["user_message"],
+            assistant_message=data["assistant_message"],
+            created_at=data["created_at"],
+            used_llm=bool(data.get("used_llm", False)),
+        )
+
+
+STAGE_SEQUENCE = [
+    Stage.INTAKE,
+    Stage.RESEARCH,
+    Stage.DEPARTMENT_DESIGN,
+    Stage.ROUNDTABLE,
+    Stage.SYNTHESIS,
+    Stage.BOARD,
+]
+
+
+@dataclass(slots=True)
 class PlanVersion:
     version_id: str
     created_at: str
@@ -140,6 +175,7 @@ class ProjectRecord:
     plans: list[PlanVersion] = field(default_factory=list)
     latest_plan: ProjectPlan | None = None
     latest_plan_markdown: str = ""
+    conversations: dict[str, list[ConversationTurn]] = field(default_factory=dict)
     error: str | None = None
 
     @classmethod
@@ -182,6 +218,85 @@ class ProjectRecord:
         self.status = ProjectStatus.REVIEWING
         self.touch()
 
+    def get_plan_version(self, version_id: str) -> PlanVersion | None:
+        for version in self.plans:
+            if version.version_id == version_id:
+                return version
+        return None
+
+    def append_conversation(self, agent: str, user_message: str, assistant_message: str, used_llm: bool) -> ConversationTurn:
+        turn = ConversationTurn(
+            agent=agent,
+            user_message=user_message,
+            assistant_message=assistant_message,
+            created_at=utc_now(),
+            used_llm=used_llm,
+        )
+        self.conversations.setdefault(agent, []).append(turn)
+        self.touch()
+        return turn
+
+    def get_conversation(self, agent: str) -> list[ConversationTurn]:
+        return self.conversations.get(agent, [])
+
+    def build_stage_progress(self) -> list[dict[str, Any]]:
+        if self.status == ProjectStatus.REVIEWING and self.current_stage != Stage.BOARD:
+            current_index = STAGE_SEQUENCE.index(self.current_stage)
+        elif self.latest_plan:
+            current_index = len(STAGE_SEQUENCE) - 1
+        else:
+            current_index = STAGE_SEQUENCE.index(self.current_stage)
+
+        result: list[dict[str, Any]] = []
+        for index, stage in enumerate(STAGE_SEQUENCE):
+            if self.status != ProjectStatus.REVIEWING and self.latest_plan:
+                status = "completed"
+            elif index < current_index:
+                status = "completed"
+            elif index == current_index:
+                status = "current"
+            else:
+                status = "pending"
+            result.append(
+                {
+                    "stage": stage.value,
+                    "label": stage.value.replace("_", " ").title(),
+                    "status": status,
+                }
+            )
+        return result
+
+    def build_timeline(self) -> list[dict[str, Any]]:
+        events: list[dict[str, Any]] = [
+            {
+                "timestamp": self.created_at,
+                "type": "project_created",
+                "title": "Project created",
+                "detail": self.name,
+            }
+        ]
+        for index, version in enumerate(self.plans, start=1):
+            events.append(
+                {
+                    "timestamp": version.created_at,
+                    "type": "plan_version",
+                    "title": f"Plan version {index}",
+                    "detail": version.summary,
+                    "version_id": version.version_id,
+                }
+            )
+        for intervention in self.interventions:
+            events.append(
+                {
+                    "timestamp": self.updated_at,
+                    "type": "intervention",
+                    "title": f"Intervention at {intervention.stage.value}",
+                    "detail": f"{intervention.speaker}: {intervention.message}",
+                }
+            )
+        events.sort(key=lambda item: item["timestamp"])
+        return events
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "project_id": self.project_id,
@@ -195,6 +310,10 @@ class ProjectRecord:
             "plans": [item.to_dict() for item in self.plans],
             "latest_plan": serialize_project_plan(self.latest_plan) if self.latest_plan else None,
             "latest_plan_markdown": self.latest_plan_markdown,
+            "conversations": {
+                agent: [turn.to_dict() for turn in turns]
+                for agent, turns in self.conversations.items()
+            },
             "error": self.error,
         }
 
@@ -216,6 +335,10 @@ class ProjectRecord:
             plans=[PlanVersion.from_dict(item) for item in data.get("plans", [])],
             latest_plan=latest_plan,
             latest_plan_markdown=data.get("latest_plan_markdown", ""),
+            conversations={
+                agent: [ConversationTurn.from_dict(turn) for turn in turns]
+                for agent, turns in data.get("conversations", {}).items()
+            },
             error=data.get("error"),
         )
 

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Intelligent Brain Company Console</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='console.css') }}">
+  </head>
+  <body>
+    <div class="page-shell">
+      <aside class="sidebar panel">
+        <div class="panel-header">
+          <div>
+            <div class="eyebrow">Control Surface</div>
+            <h1>Intelligent Brain Company</h1>
+          </div>
+          <button id="refresh-projects" class="ghost-button">刷新</button>
+        </div>
+
+        <form id="create-project-form" class="stack">
+          <label>
+            <span>项目标题</span>
+            <input name="title" placeholder="例如：电动三轮车" required>
+          </label>
+          <label>
+            <span>项目摘要</span>
+            <textarea name="summary" rows="3" placeholder="一句话说明你要做什么"></textarea>
+          </label>
+          <label>
+            <span>约束条件</span>
+            <textarea name="constraints" rows="3" placeholder="每行一个，例如：单车成本低于 18000 元"></textarea>
+          </label>
+          <button type="submit" class="primary-button">创建项目</button>
+        </form>
+
+        <div class="list-header">项目列表</div>
+        <div id="project-list" class="project-list"></div>
+      </aside>
+
+      <main class="main-grid">
+        <section class="hero panel">
+          <div>
+            <div class="eyebrow">Live Board</div>
+            <h2 id="project-name">选择一个项目</h2>
+            <p id="project-meta" class="muted">创建后可生成计划、提交干预、查看阶段进度与版本差异。</p>
+          </div>
+          <div class="hero-actions">
+            <button id="generate-plan" class="primary-button" disabled>生成计划</button>
+          </div>
+        </section>
+
+        <section class="panel progress-panel">
+          <div class="section-head">
+            <h3>阶段进度</h3>
+          </div>
+          <div id="stage-progress" class="stage-progress"></div>
+        </section>
+
+        <section class="panel plan-panel">
+          <div class="section-head">
+            <h3>最新计划</h3>
+          </div>
+          <pre id="plan-markdown" class="markdown-view">尚未生成计划。</pre>
+        </section>
+
+        <section class="panel side-panel">
+          <div class="section-head">
+            <h3>提交干预</h3>
+          </div>
+          <form id="intervention-form" class="stack compact">
+            <label>
+              <span>阶段</span>
+              <select name="stage">
+                <option value="research">Research</option>
+                <option value="department_design">Department Design</option>
+                <option value="roundtable">Roundtable</option>
+                <option value="synthesis">Synthesis</option>
+                <option value="board">Board</option>
+              </select>
+            </label>
+            <label>
+              <span>发言人</span>
+              <input name="speaker" value="founder">
+            </label>
+            <label>
+              <span>讨论内容</span>
+              <textarea name="message" rows="3" placeholder="例如：优先考虑可维护性"></textarea>
+            </label>
+            <label>
+              <span>预期影响</span>
+              <textarea name="impact" rows="3" placeholder="例如：降低复杂度并缩短打样周期"></textarea>
+            </label>
+            <button type="submit" class="primary-button" disabled id="submit-intervention">提交并重算</button>
+          </form>
+
+          <div class="section-head chat-head">
+            <h3>直接对话</h3>
+          </div>
+          <div class="chat-toolbar">
+            <select id="chat-agent">
+              <option value="research">研究组</option>
+              <option value="board">董事会</option>
+              <option value="hardware">硬件</option>
+              <option value="software">软件</option>
+              <option value="design">设计</option>
+              <option value="marketing">营销</option>
+              <option value="finance">财务</option>
+            </select>
+            <button id="refresh-chat" class="ghost-button" disabled>刷新</button>
+          </div>
+          <div id="chat-history" class="chat-history"></div>
+          <form id="chat-form" class="stack compact">
+            <label>
+              <span>发送给当前角色</span>
+              <textarea id="chat-message" rows="3" placeholder="例如：研究组请重新评估目标用户的购买频率"></textarea>
+            </label>
+            <button type="submit" class="primary-button" disabled id="send-chat">发送消息</button>
+          </form>
+        </section>
+
+        <section class="panel timeline-panel">
+          <div class="section-head">
+            <h3>项目时间线</h3>
+          </div>
+          <div id="timeline" class="timeline"></div>
+        </section>
+
+        <section class="panel diff-panel">
+          <div class="section-head split">
+            <h3>版本差异</h3>
+            <button id="load-diff" class="ghost-button" disabled>查看 Diff</button>
+          </div>
+          <div class="diff-controls">
+            <select id="diff-from"></select>
+            <select id="diff-to"></select>
+          </div>
+          <pre id="diff-output" class="diff-view">至少需要两个版本。</pre>
+        </section>
+      </main>
+    </div>
+    <script src="{{ url_for('static', filename='console.js') }}"></script>
+  </body>
+  </html>

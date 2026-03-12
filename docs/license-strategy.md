@@ -2,9 +2,9 @@
 
 ## Current State
 
-The repository currently uses AGPL-3.0.
+The repository now uses Apache-2.0.
 
-That is a strong copyleft choice and has one clear advantage for an AI SaaS workflow product: if someone modifies and deploys the software over a network, they are typically required to make the modified source available.
+That choice prioritizes adoption, commercial collaboration, and ecosystem growth over strong copyleft protection.
 
 ## Where AGPL Helps
 
@@ -52,6 +52,6 @@ That usually points to Apache-2.0 as the stronger business choice.
 
 Do not switch licenses casually after public adoption begins.
 
-If the project is still early and you want broad collaboration, switch now from AGPL-3.0 to Apache-2.0.
+The repository has already switched from AGPL-3.0 to Apache-2.0.
 
-If you are still undecided, keep AGPL-3.0 temporarily and revisit the decision before the first public release or external contribution wave.
+If future product strategy changes and strong reciprocity becomes more important than adoption, revisit the licensing decision before building major external dependency on the current terms.

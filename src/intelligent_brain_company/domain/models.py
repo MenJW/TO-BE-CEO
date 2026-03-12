@@ -55,6 +55,9 @@ class DepartmentSolution:
     feasibility_score: int
     dependencies: list[Department] = field(default_factory=list)
     assumptions: list[str] = field(default_factory=list)
+    rationale: str = ""
+    implementation_steps: list[str] = field(default_factory=list)
+    success_metrics: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)

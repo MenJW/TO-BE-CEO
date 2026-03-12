@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from statistics import mean
 
+from intelligent_brain_company.agents.runtime import BoardAgent, DepartmentAgent, ResearchAgent
 from intelligent_brain_company.domain.models import (
     BoardDecision,
     Department,
@@ -23,6 +24,14 @@ DEPARTMENT_DEPENDENCIES: dict[Department, list[Department]] = {
     Department.FINANCE: [Department.HARDWARE, Department.MARKETING],
 }
 
+LLM_ENABLED_DEPARTMENTS = (
+    Department.HARDWARE,
+    Department.SOFTWARE,
+    Department.DESIGN,
+    Department.MARKETING,
+    Department.FINANCE,
+)
+
 
 class CompanyPipeline:
     """Deterministic MVP pipeline.
@@ -32,17 +41,35 @@ class CompanyPipeline:
     stable executable contract and test surface.
     """
 
+    def __init__(
+        self,
+        research_agent: ResearchAgent | None = None,
+        board_agent: BoardAgent | None = None,
+        department_agents: dict[Department, DepartmentAgent] | None = None,
+    ) -> None:
+        self.research_agent = research_agent or ResearchAgent()
+        self.board_agent = board_agent or BoardAgent()
+        self.department_agents = department_agents or {}
+
     def run(
         self,
         brief: IdeaBrief,
         interventions: list[UserIntervention] | None = None,
     ) -> ProjectPlan:
         active_interventions = interventions or []
-        research = self._run_research(brief, active_interventions)
+        fallback_research = self._build_default_research(brief, active_interventions)
+        research = self.research_agent.analyze(brief, active_interventions, fallback_research)
         department_solutions = self._generate_department_solutions(brief, active_interventions)
         roundtable_reviews = self._run_roundtables(department_solutions, active_interventions)
         selected_solutions = self._select_solutions(department_solutions)
-        board_decision = self._run_board_review(brief, selected_solutions, research, active_interventions)
+        fallback_board = self._build_default_board_review(brief, selected_solutions, research, active_interventions)
+        board_decision = self.board_agent.review(
+            brief,
+            research,
+            selected_solutions,
+            active_interventions,
+            fallback_board,
+        )
         return ProjectPlan(
             idea=brief,
             research=research,
@@ -74,6 +101,10 @@ class CompanyPipeline:
             lines.append(f"- Feasibility score: {solution.feasibility_score}/10")
             if solution.assumptions:
                 lines.append(f"- Assumptions: {'; '.join(solution.assumptions)}")
+            if solution.rationale:
+                lines.append(f"- Rationale: {solution.rationale}")
+            if solution.success_metrics:
+                lines.append(f"- Success metrics: {'; '.join(solution.success_metrics)}")
             lines.append("")
         lines.append("## Board Decision")
         lines.append("")
@@ -94,7 +125,7 @@ class CompanyPipeline:
                 )
         return "\n".join(lines)
 
-    def _run_research(
+    def _build_default_research(
         self,
         brief: IdeaBrief,
         interventions: list[UserIntervention],
@@ -127,7 +158,7 @@ class CompanyPipeline:
         interventions: list[UserIntervention],
     ) -> dict[Department, list[DepartmentSolution]]:
         context = self._constraint_text(brief, interventions)
-        return {
+        fallback_solutions = {
             Department.HARDWARE: self._build_solution_set(
                 department=Department.HARDWARE,
                 base_name="Platform",
@@ -164,6 +195,11 @@ class CompanyPipeline:
                 base_score=8,
             ),
         }
+        resolved: dict[Department, list[DepartmentSolution]] = {}
+        for department, solutions in fallback_solutions.items():
+            agent = self.department_agents.get(department)
+            resolved[department] = agent.plan(brief, interventions, solutions) if agent else solutions
+        return resolved
 
     def _build_solution_set(
         self,
@@ -188,6 +224,16 @@ class CompanyPipeline:
                     feasibility_score=max(1, min(10, base_score + delta)),
                     dependencies=DEPARTMENT_DEPENDENCIES.get(department, []),
                     assumptions=assumptions,
+                    rationale=f"{department.value.title()} option {suffix} balances the current constraint set against execution risk.",
+                    implementation_steps=[
+                        "Clarify assumptions with cross-functional stakeholders.",
+                        "Build a limited-scope pilot.",
+                        "Measure operational performance before scale-up.",
+                    ],
+                    success_metrics=[
+                        "Pilot milestones hit on time.",
+                        "Cost envelope remains within target.",
+                    ],
                 )
             )
         return solutions
@@ -230,7 +276,7 @@ class CompanyPipeline:
             selected[department] = max(solutions, key=lambda item: item.feasibility_score)
         return selected
 
-    def _run_board_review(
+    def _build_default_board_review(
         self,
         brief: IdeaBrief,
         selected_solutions: dict[Department, DepartmentSolution],

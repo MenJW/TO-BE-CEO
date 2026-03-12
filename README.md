@@ -6,6 +6,10 @@ This repository now contains the first project skeleton for that vision: a clear
 
 It now also includes a minimal backend service with project persistence and HTTP APIs, so the next step can be a real product console rather than a standalone script.
 
+Research and board stages can now use a real OpenAI-compatible LLM endpoint when configured; without credentials, the system falls back to deterministic local generation.
+
+Hardware, software, design, marketing, and finance departments now also support structured LLM generation through explicit JSON contracts, and the console includes a direct chat panel for talking to research, board, or department agents.
+
 ## Why This Project
 
 Most multi-agent projects stop at role-playing or software-only collaboration. Your idea is stronger than that: it treats AI agents as a company with explicit departments, governance, review loops, and human intervention at any stage.
@@ -27,8 +31,10 @@ The current scaffold focuses on the smallest useful end-to-end slice:
 - Domain objects for ideas, solutions, reviews, board decisions, and user interventions.
 - A company pipeline that simulates the full planning process.
 - Department registry for research, hardware, software, design, marketing, and finance.
+- Structured JSON contracts for department solution generation.
 - A CLI command that turns an idea into a structured draft plan.
 - A Flask API for creating projects, generating plans, and recording interventions.
+- A chat API and console panel for direct conversation with research, board, and department agents.
 - File-based persistence for project state and task history.
 - Documentation for execution roadmap and license strategy.
 
@@ -47,7 +53,9 @@ This is intentionally framework-light. The current implementation keeps orchestr
 │       │   ├── planning.py
 │       │   └── projects.py
 │       ├── agents/
-│       │   └── registry.py
+│       │   ├── contracts.py
+│       │   ├── registry.py
+│       │   └── runtime.py
 │       ├── app.py
 │       ├── config.py
 │       ├── domain/
@@ -56,6 +64,7 @@ This is intentionally framework-light. The current implementation keeps orchestr
 │       ├── interfaces/
 │       │   └── cli.py
 │       ├── services/
+│       │   ├── llm_client.py
 │       │   ├── planning.py
 │       │   ├── project_store.py
 │       │   └── task_store.py
@@ -91,6 +100,18 @@ Example flow:
 3. POST /api/planning/interventions to insert user feedback and regenerate.
 4. GET /api/projects/<project_id> to inspect the stored state.
 
+Open the control surface at http://127.0.0.1:8000 to create projects, view plans, inspect timeline and progress, and submit interventions.
+
+The console also exposes a conversation panel where you can directly talk to research, board, hardware, software, design, marketing, or finance.
+
+If you want live LLM-backed research, board, and department reviews, set these environment variables before starting the API:
+
+```bash
+IBC_LLM_API_KEY=your_key
+IBC_LLM_BASE_URL=https://your-openai-compatible-endpoint/v1
+IBC_LLM_MODEL=your-model-name
+```
+
 ## Architecture Direction
 
 The architecture is split into four layers:
@@ -112,6 +133,6 @@ That split matters because the long-term moat is not individual prompts. It is t
 
 ## License Note
 
-The repository currently keeps the existing AGPL-3.0 license file untouched. That is the safest default until you confirm your distribution strategy.
+This repository now uses Apache-2.0.
 
-If your goal is broad ecosystem adoption, easier commercial collaboration, and plugin contributions, Apache-2.0 is likely a better fit than AGPL-3.0. The tradeoff analysis is documented in docs/license-strategy.md.
+That aligns the codebase with a permissive adoption strategy: easier commercial collaboration, fewer contributor onboarding hurdles, and cleaner integration into enterprise stacks. The rationale and historical tradeoff note remain in docs/license-strategy.md.

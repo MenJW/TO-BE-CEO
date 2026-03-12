@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from difflib import unified_diff
+
 from flask import current_app, jsonify, request
 
 from intelligent_brain_company.api import planning_bp
@@ -116,3 +118,142 @@ def get_task(task_id: str):
     if task is None:
         return jsonify({"success": False, "error": "task not found"}), 404
     return jsonify({"success": True, "data": task.to_dict()})
+
+
+@planning_bp.route("/api/projects/<project_id>/timeline", methods=["GET"])
+def get_project_timeline(project_id: str):
+    project_store = current_app.extensions["project_store"]
+    task_store = current_app.extensions["task_store"]
+    project = project_store.get_project(project_id)
+    if project is None:
+        return jsonify({"success": False, "error": "project not found"}), 404
+
+    timeline = project.build_timeline()
+    for task in task_store.list_tasks_for_project(project_id):
+        timeline.append(
+            {
+                "timestamp": task.updated_at,
+                "type": "task",
+                "title": task.kind,
+                "detail": task.status.value,
+                "task_id": task.task_id,
+            }
+        )
+    timeline.sort(key=lambda item: item["timestamp"])
+    return jsonify({"success": True, "data": timeline})
+
+
+@planning_bp.route("/api/projects/<project_id>/progress", methods=["GET"])
+def get_project_progress(project_id: str):
+    project_store = current_app.extensions["project_store"]
+    project = project_store.get_project(project_id)
+    if project is None:
+        return jsonify({"success": False, "error": "project not found"}), 404
+    return jsonify(
+        {
+            "success": True,
+            "data": {
+                "project_id": project.project_id,
+                "status": project.status.value,
+                "current_stage": project.current_stage.value,
+                "stages": project.build_stage_progress(),
+            },
+        }
+    )
+
+
+@planning_bp.route("/api/projects/<project_id>/plans/<version_id>", methods=["GET"])
+def get_plan_version(project_id: str, version_id: str):
+    project_store = current_app.extensions["project_store"]
+    project = project_store.get_project(project_id)
+    if project is None:
+        return jsonify({"success": False, "error": "project not found"}), 404
+    version = project.get_plan_version(version_id)
+    if version is None:
+        return jsonify({"success": False, "error": "plan version not found"}), 404
+    return jsonify({"success": True, "data": version.to_dict()})
+
+
+@planning_bp.route("/api/projects/<project_id>/plans/diff", methods=["GET"])
+def get_plan_diff(project_id: str):
+    from_version = request.args.get("from")
+    to_version = request.args.get("to")
+    if not from_version or not to_version:
+        return jsonify({"success": False, "error": "from and to query params are required"}), 400
+
+    project_store = current_app.extensions["project_store"]
+    project = project_store.get_project(project_id)
+    if project is None:
+        return jsonify({"success": False, "error": "project not found"}), 404
+
+    left = project.get_plan_version(from_version)
+    right = project.get_plan_version(to_version)
+    if left is None or right is None:
+        return jsonify({"success": False, "error": "plan version not found"}), 404
+
+    diff_lines = list(
+        unified_diff(
+            left.markdown.splitlines(),
+            right.markdown.splitlines(),
+            fromfile=left.version_id,
+            tofile=right.version_id,
+            lineterm="",
+        )
+    )
+    return jsonify(
+        {
+            "success": True,
+            "data": {
+                "from": left.to_dict(),
+                "to": right.to_dict(),
+                "diff": "\n".join(diff_lines),
+            },
+        }
+    )
+
+
+@planning_bp.route("/api/projects/<project_id>/chat", methods=["GET"])
+def get_project_chat(project_id: str):
+    agent = request.args.get("agent", "research")
+    project_store = current_app.extensions["project_store"]
+    project = project_store.get_project(project_id)
+    if project is None:
+        return jsonify({"success": False, "error": "project not found"}), 404
+    return jsonify(
+        {
+            "success": True,
+            "data": {
+                "agent": agent,
+                "history": [turn.to_dict() for turn in project.get_conversation(agent)],
+            },
+        }
+    )
+
+
+@planning_bp.route("/api/projects/<project_id>/chat", methods=["POST"])
+def post_project_chat(project_id: str):
+    payload = request.get_json(silent=True) or {}
+    agent = str(payload.get("agent", "research"))
+    message = str(payload.get("message", "")).strip()
+    if not message:
+        return jsonify({"success": False, "error": "message is required"}), 400
+
+    project_store = current_app.extensions["project_store"]
+    chat_agent = current_app.extensions["chat_agent"]
+    project = project_store.get_project(project_id)
+    if project is None:
+        return jsonify({"success": False, "error": "project not found"}), 404
+
+    reply, used_llm = chat_agent.reply(project, agent, message)
+    turn = project.append_conversation(agent=agent, user_message=message, assistant_message=reply, used_llm=used_llm)
+    project_store.save_project(project)
+    return jsonify(
+        {
+            "success": True,
+            "data": {
+                "agent": agent,
+                "turn": turn.to_dict(),
+                "history": [item.to_dict() for item in project.get_conversation(agent)],
+            },
+        }
+    )

@@ -1,12 +1,35 @@
 from __future__ import annotations
 
-from intelligent_brain_company.domain.models import IdeaBrief, ProjectPlan, UserIntervention
+from intelligent_brain_company.agents.runtime import BoardAgent, DepartmentAgent, ResearchAgent
+from intelligent_brain_company.config import AppConfig
+from intelligent_brain_company.domain.models import Department, IdeaBrief, ProjectPlan, UserIntervention
+from intelligent_brain_company.services.llm_client import LLMClient
 from intelligent_brain_company.workflows.pipeline import CompanyPipeline
 
 
 class PlanningOrchestrator:
-    def __init__(self, pipeline: CompanyPipeline | None = None) -> None:
-        self.pipeline = pipeline or CompanyPipeline()
+    def __init__(self, pipeline: CompanyPipeline | None = None, config: AppConfig | None = None) -> None:
+        if pipeline is not None:
+            self.pipeline = pipeline
+            return
+
+        app_config = config or AppConfig.from_env()
+        llm_client = LLMClient.from_config(app_config)
+        department_agents = {
+            department: DepartmentAgent(department=department, llm_client=llm_client)
+            for department in (
+                Department.HARDWARE,
+                Department.SOFTWARE,
+                Department.DESIGN,
+                Department.MARKETING,
+                Department.FINANCE,
+            )
+        }
+        self.pipeline = CompanyPipeline(
+            research_agent=ResearchAgent(llm_client=llm_client),
+            board_agent=BoardAgent(llm_client=llm_client),
+            department_agents=department_agents,
+        )
 
     def build_plan(
         self,

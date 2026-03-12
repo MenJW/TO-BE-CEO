@@ -23,6 +23,15 @@ class TaskStore:
         path.write_text(json.dumps(task.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
         return task
 
+    def list_tasks_for_project(self, project_id: str) -> list[TaskRecord]:
+        tasks: list[TaskRecord] = []
+        for path in sorted(self.config.tasks_dir.glob("*.json")):
+            task = self._load_file(path)
+            if task.project_id == project_id:
+                tasks.append(task)
+        tasks.sort(key=lambda item: item.updated_at)
+        return tasks
+
     def _task_path(self, task_id: str) -> Path:
         return self.config.tasks_dir / f"{task_id}.json"
 

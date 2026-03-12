@@ -57,3 +57,65 @@ def test_intervention_creates_new_plan_version(tmp_path: Path) -> None:
     project = revised.get_json()["data"]["project"]
     assert len(project["plans"]) == 2
     assert len(project["interventions"]) == 1
+
+
+def test_timeline_progress_and_diff_endpoints(tmp_path: Path) -> None:
+    app = make_test_app(tmp_path)
+    client = app.test_client()
+
+    created = client.post("/api/projects", json={"title": "Warehouse Shuttle"}).get_json()["data"]
+    project_id = created["project_id"]
+    client.post("/api/planning/generate", json={"project_id": project_id})
+    second = client.post(
+        "/api/planning/interventions",
+        json={
+            "project_id": project_id,
+            "stage": "board",
+            "speaker": "founder",
+            "message": "Reduce capital intensity.",
+            "impact": "favor phased rollout and smaller pilot",
+        },
+    ).get_json()["data"]["project"]
+
+    progress = client.get(f"/api/projects/{project_id}/progress")
+    assert progress.status_code == 200
+    assert progress.get_json()["data"]["stages"]
+
+    timeline = client.get(f"/api/projects/{project_id}/timeline")
+    assert timeline.status_code == 200
+    assert len(timeline.get_json()["data"]) >= 3
+
+    version_ids = [item["version_id"] for item in second["plans"]]
+    diff = client.get(f"/api/projects/{project_id}/plans/diff?from={version_ids[0]}&to={version_ids[1]}")
+    assert diff.status_code == 200
+    assert "diff" in diff.get_json()["data"]
+
+
+def test_console_page_is_served(tmp_path: Path) -> None:
+    app = make_test_app(tmp_path)
+    client = app.test_client()
+    response = client.get("/")
+    assert response.status_code == 200
+    assert b"Intelligent Brain Company" in response.data
+
+
+def test_chat_endpoint_persists_history(tmp_path: Path) -> None:
+    app = make_test_app(tmp_path)
+    client = app.test_client()
+
+    created = client.post("/api/projects", json={"title": "Portable Cold Chain Box"}).get_json()["data"]
+    project_id = created["project_id"]
+    client.post("/api/planning/generate", json={"project_id": project_id})
+
+    chat = client.post(
+        f"/api/projects/{project_id}/chat",
+        json={"agent": "research", "message": "目标客户更像 B 端还是 C 端？"},
+    )
+    assert chat.status_code == 200
+    payload = chat.get_json()["data"]
+    assert payload["history"]
+    assert payload["history"][0]["agent"] == "research"
+
+    history = client.get(f"/api/projects/{project_id}/chat?agent=research")
+    assert history.status_code == 200
+    assert len(history.get_json()["data"]["history"]) == 1
