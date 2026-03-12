@@ -1,5 +1,7 @@
 # Intelligent Brain Company
 
+English | [简体中文](README.zh-CN.md)
+
 Intelligent Brain Company is an AI startup simulator: you submit one idea, an AI company evaluates it through research, departments, and board review, and you get a structured go or no-go plan instead of a single chat reply.
 
 This repository is now usable as a demo product rather than only a concept scaffold. It includes a web console, SQLite-backed project history, plan version diff, direct chat with departments, and a promote-to-intervention loop that turns a conversation turn into a formal change request and triggers recomputation.
