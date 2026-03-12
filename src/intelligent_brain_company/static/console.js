@@ -4,8 +4,12 @@ const state = {
 }
 
 const projectList = document.getElementById('project-list')
+const demoProjectList = document.getElementById('demo-project-list')
 const projectName = document.getElementById('project-name')
 const projectMeta = document.getElementById('project-meta')
+const verdictBadge = document.getElementById('verdict-badge')
+const verdictSummary = document.getElementById('verdict-summary')
+const scoreGrid = document.getElementById('score-grid')
 const planMarkdown = document.getElementById('plan-markdown')
 const stageProgress = document.getElementById('stage-progress')
 const timeline = document.getElementById('timeline')
@@ -21,6 +25,27 @@ const generatePlanButton = document.getElementById('generate-plan')
 const submitInterventionButton = document.getElementById('submit-intervention')
 const loadDiffButton = document.getElementById('load-diff')
 
+const DEMO_PROJECTS = [
+  {
+    title: 'AI 面试训练教练',
+    summary: '面向应届生和转岗求职者的 AI 模拟面试产品。',
+    constraints: ['首月上线 MVP', '优先验证付费意愿', '先做中文场景'],
+    metrics: ['7 天留存', '付费转化率', '模拟面试完成率'],
+  },
+  {
+    title: '跨境电商选品助手',
+    summary: '帮助中小卖家快速评估选品机会、供货风险和渠道策略。',
+    constraints: ['先服务亚马逊卖家', '强调低调研成本', '输出可执行选品建议'],
+    metrics: ['周活卖家数', '候选商品转化率', '选品报告复用率'],
+  },
+  {
+    title: '校园二手交易平台',
+    summary: '围绕高校宿舍场景做高频低客单的可信二手流转。',
+    constraints: ['低预算冷启动', '先跑单校模型', '优先供需匹配效率'],
+    metrics: ['首周成交数', '发布到成交时长', '校园渗透率'],
+  },
+]
+
 async function api(path, options = {}) {
   const response = await fetch(path, {
     headers: { 'Content-Type': 'application/json' },
@@ -35,9 +60,13 @@ async function api(path, options = {}) {
 
 function showProject(project) {
   state.activeProject = project
+  const recommendation = project.latest_plan?.scorecard?.recommendation
   projectName.textContent = project.name
-  projectMeta.textContent = `${project.status} · ${project.current_stage} · ${project.plans.length} 个版本`
+  projectMeta.textContent = recommendation
+    ? `${project.status} · ${project.current_stage} · ${project.plans.length} 个版本 · 结论 ${recommendation}`
+    : `${project.status} · ${project.current_stage} · ${project.plans.length} 个版本`
   planMarkdown.textContent = project.latest_plan_markdown || '尚未生成计划。'
+  renderScorecard(project.latest_plan?.scorecard || null)
   generatePlanButton.disabled = false
   submitInterventionButton.disabled = false
   sendChatButton.disabled = false
@@ -47,6 +76,63 @@ function showProject(project) {
   loadTimeline(project.project_id)
   renderDiffSelectors(project.plans)
   loadChat(project.project_id, chatAgentSelect.value)
+}
+
+function renderDemoProjects() {
+  demoProjectList.innerHTML = ''
+  DEMO_PROJECTS.forEach((preset) => {
+    const button = document.createElement('button')
+    button.className = 'demo-card'
+    button.innerHTML = `
+      <div class="demo-card-title">${preset.title}</div>
+      <div class="demo-card-summary">${preset.summary}</div>
+      <div class="demo-card-meta">约束: ${preset.constraints.join(' / ')}</div>
+    `
+    button.addEventListener('click', async () => {
+      projectMeta.textContent = `正在加载 Demo：${preset.title}`
+      try {
+        const project = await createProject(preset, true)
+        showProject(project)
+        await loadProjects()
+      } catch (error) {
+        projectMeta.textContent = error.message
+      }
+    })
+    demoProjectList.appendChild(button)
+  })
+}
+
+function renderScorecard(scorecard) {
+  scoreGrid.innerHTML = ''
+  if (!scorecard) {
+    verdictBadge.textContent = '等待生成'
+    verdictBadge.className = 'verdict-badge idle'
+    verdictSummary.textContent = '生成计划后，这里会显示一个更像创业评审会的综合判断。'
+    return
+  }
+
+  verdictBadge.textContent = scorecard.recommendation
+  verdictBadge.className = `verdict-badge ${scorecard.recommendation.toLowerCase().replace(/[^a-z]/g, '-')}`
+  verdictSummary.textContent = scorecard.summary
+
+  const items = [
+    ['市场需求', scorecard.market_demand, '目标客户是否足够明确、足够痛。'],
+    ['技术可行性', scorecard.technical_feasibility, '现有能力与实现路径是否顺滑。'],
+    ['执行复杂度', scorecard.execution_complexity, '越低越容易推进。'],
+    ['MVP 时效', scorecard.time_to_mvp, '越高代表越适合快速启动。'],
+    ['商业化潜力', scorecard.monetization_potential, '是否具备清晰的变现抓手。'],
+  ]
+
+  items.forEach(([label, score, note]) => {
+    const item = document.createElement('div')
+    item.className = 'score-card'
+    item.innerHTML = `
+      <div class="score-label">${label}</div>
+      <div class="score-value">${score}<span>/10</span></div>
+      <div class="score-note">${note}</div>
+    `
+    scoreGrid.appendChild(item)
+  })
 }
 
 function renderProjects() {
@@ -161,6 +247,26 @@ async function loadProjects() {
   }
 }
 
+async function createProject(payload, autoGenerate = false) {
+  const project = await api('/api/projects', {
+    method: 'POST',
+    body: JSON.stringify({
+      title: payload.title,
+      summary: payload.summary,
+      constraints: payload.constraints || [],
+      metrics: payload.metrics || [],
+    }),
+  })
+  if (!autoGenerate) {
+    return project
+  }
+  const generation = await api('/api/planning/generate', {
+    method: 'POST',
+    body: JSON.stringify({ project_id: project.project_id }),
+  })
+  return generation.project
+}
+
 async function loadProgress(projectId) {
   const data = await api(`/api/projects/${projectId}/progress`)
   renderProgress(data.stages)
@@ -196,13 +302,10 @@ document.getElementById('create-project-form').addEventListener('submit', async 
     .map((item) => item.trim())
     .filter(Boolean)
 
-  const project = await api('/api/projects', {
-    method: 'POST',
-    body: JSON.stringify({
-      title: form.get('title'),
-      summary: form.get('summary'),
-      constraints,
-    }),
+  const project = await createProject({
+    title: form.get('title'),
+    summary: form.get('summary'),
+    constraints,
   })
   state.projects.unshift(project)
   renderProjects()
@@ -281,3 +384,6 @@ chatAgentSelect.addEventListener('change', async () => {
 loadProjects().catch((error) => {
   projectMeta.textContent = error.message
 })
+
+renderDemoProjects()
+renderScorecard(null)

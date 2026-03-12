@@ -14,6 +14,8 @@ def test_pipeline_generates_selected_solution_for_each_department() -> None:
 
     assert len(plan.selected_solutions) == 5
     assert plan.board_decision.conditions
+    assert plan.scorecard is not None
+    assert plan.scorecard.recommendation in {"Go", "Maybe", "No-Go"}
 
 
 def test_pipeline_renders_markdown_output() -> None:
@@ -22,4 +24,5 @@ def test_pipeline_renders_markdown_output() -> None:
     output = orchestrator.render_plan(plan)
 
     assert "# Project Plan" in output
+    assert "## Executive Verdict" in output
     assert "## Board Decision" in output

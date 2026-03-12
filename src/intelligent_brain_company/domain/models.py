@@ -82,6 +82,17 @@ class BoardDecision:
 
 
 @dataclass(slots=True)
+class PlanScorecard:
+    market_demand: int
+    technical_feasibility: int
+    execution_complexity: int
+    time_to_mvp: int
+    monetization_potential: int
+    recommendation: str
+    summary: str
+
+
+@dataclass(slots=True)
 class ProjectPlan:
     idea: IdeaBrief
     research: ResearchAssessment
@@ -89,4 +100,5 @@ class ProjectPlan:
     roundtable_reviews: list[RoundtableReview]
     selected_solutions: dict[Department, DepartmentSolution]
     board_decision: BoardDecision
+    scorecard: PlanScorecard | None = None
     interventions: list[UserIntervention] = field(default_factory=list)

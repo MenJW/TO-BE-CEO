@@ -8,6 +8,7 @@ from intelligent_brain_company.domain.models import (
     Department,
     DepartmentSolution,
     IdeaBrief,
+    PlanScorecard,
     ProjectPlan,
     ResearchAssessment,
     RoundtableReview,
@@ -70,6 +71,13 @@ class CompanyPipeline:
             active_interventions,
             fallback_board,
         )
+        scorecard = self._build_scorecard(
+            brief,
+            research,
+            selected_solutions,
+            board_decision,
+            active_interventions,
+        )
         return ProjectPlan(
             idea=brief,
             research=research,
@@ -77,6 +85,7 @@ class CompanyPipeline:
             roundtable_reviews=roundtable_reviews,
             selected_solutions=selected_solutions,
             board_decision=board_decision,
+            scorecard=scorecard,
             interventions=active_interventions,
         )
 
@@ -84,6 +93,18 @@ class CompanyPipeline:
         lines: list[str] = []
         lines.append(f"# Project Plan: {plan.idea.title}")
         lines.append("")
+        if plan.scorecard:
+            lines.append("## Executive Verdict")
+            lines.append("")
+            lines.append(f"- Recommendation: {plan.scorecard.recommendation}")
+            lines.append(f"- Summary: {plan.scorecard.summary}")
+            lines.append("- Scorecard:")
+            lines.append(f"  - Market demand: {plan.scorecard.market_demand}/10")
+            lines.append(f"  - Technical feasibility: {plan.scorecard.technical_feasibility}/10")
+            lines.append(f"  - Execution complexity: {plan.scorecard.execution_complexity}/10 (lower is easier)")
+            lines.append(f"  - Time to MVP: {plan.scorecard.time_to_mvp}/10")
+            lines.append(f"  - Monetization potential: {plan.scorecard.monetization_potential}/10")
+            lines.append("")
         lines.append("## Research Assessment")
         lines.append("")
         lines.append(f"- Customer segments: {', '.join(plan.research.customer_segments)}")
@@ -353,6 +374,54 @@ class CompanyPipeline:
                 "Validate demand before committing to large capital outlays.",
                 "Track user interventions as formal change requests.",
             ],
+        )
+
+    def _build_scorecard(
+        self,
+        brief: IdeaBrief,
+        research: ResearchAssessment,
+        selected_solutions: dict[Department, DepartmentSolution],
+        board_decision: BoardDecision,
+        interventions: list[UserIntervention],
+    ) -> PlanScorecard:
+        average_score = mean(solution.feasibility_score for solution in selected_solutions.values())
+        intervention_penalty = min(2, len(interventions))
+        risk_penalty = min(2, len(research.key_risks) // 2)
+        constraint_bonus = 1 if brief.user_constraints else 0
+
+        market_demand = max(1, min(10, round(7 + constraint_bonus - risk_penalty)))
+        technical_feasibility = max(1, min(10, round(average_score)))
+        execution_complexity = max(1, min(10, round(11 - average_score + intervention_penalty)))
+        time_to_mvp = max(1, min(10, round(average_score - intervention_penalty + 1)))
+        monetization_potential = max(1, min(10, round((market_demand + selected_solutions[Department.MARKETING].feasibility_score + selected_solutions[Department.FINANCE].feasibility_score) / 3)))
+
+        weighted_score = (
+            market_demand * 0.25
+            + technical_feasibility * 0.25
+            + (11 - execution_complexity) * 0.2
+            + time_to_mvp * 0.15
+            + monetization_potential * 0.15
+        )
+        if weighted_score >= 7.5 and board_decision.approved:
+            recommendation = "Go"
+        elif weighted_score >= 6.2:
+            recommendation = "Maybe"
+        else:
+            recommendation = "No-Go"
+
+        summary = (
+            f"{brief.title} currently reads as {recommendation.lower()} because demand and cross-functional feasibility are "
+            f"{'strong' if weighted_score >= 7.5 else 'mixed' if weighted_score >= 6.2 else 'weak'}, "
+            f"while board conditions remain {board_decision.budget_outlook}."
+        )
+        return PlanScorecard(
+            market_demand=market_demand,
+            technical_feasibility=technical_feasibility,
+            execution_complexity=execution_complexity,
+            time_to_mvp=time_to_mvp,
+            monetization_potential=monetization_potential,
+            recommendation=recommendation,
+            summary=summary,
         )
 
     def _constraint_text(self, brief: IdeaBrief, interventions: list[UserIntervention]) -> str:

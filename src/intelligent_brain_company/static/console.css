@@ -39,6 +39,7 @@ body {
   gap: 18px;
   grid-template-areas:
     "hero hero"
+    "verdict side"
     "progress side"
     "plan side"
     "plan timeline"
@@ -62,6 +63,7 @@ body {
 }
 
 .hero { grid-area: hero; display: flex; justify-content: space-between; align-items: center; }
+.verdict-panel { grid-area: verdict; }
 .progress-panel { grid-area: progress; }
 .plan-panel { grid-area: plan; }
 .side-panel { grid-area: side; }
@@ -84,6 +86,13 @@ h2 { font-size: 34px; line-height: 1.05; }
 h3 { font-size: 18px; }
 
 .muted { color: var(--muted); margin-top: 8px; }
+
+.demo-caption {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
 
 .panel-header,
 .section-head,
@@ -158,6 +167,7 @@ button:disabled {
 }
 
 .project-list,
+.demo-project-list,
 .timeline,
 .stage-progress,
 .chat-history {
@@ -166,6 +176,7 @@ button:disabled {
 }
 
 .project-card,
+.demo-card,
 .timeline-item,
 .stage-item,
 .chat-bubble {
@@ -173,6 +184,106 @@ button:disabled {
   border-radius: 16px;
   background: var(--panel-strong);
   border: 1px solid var(--line);
+}
+
+.hero-copy {
+  max-width: 760px;
+}
+
+.hero-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.hero-step {
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(255, 248, 240, 0.72);
+}
+
+.hero-step strong,
+.demo-card-title,
+.score-label {
+  display: block;
+  font-weight: 700;
+}
+
+.hero-step span,
+.demo-card-summary,
+.demo-card-meta,
+.score-note {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.demo-card {
+  text-align: left;
+  background: linear-gradient(180deg, rgba(255, 248, 240, 0.96), rgba(255, 244, 232, 0.9));
+}
+
+.score-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.score-card {
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: #fffaf4;
+}
+
+.score-value {
+  margin-top: 10px;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.score-value span {
+  margin-left: 4px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.verdict-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.verdict-badge.go {
+  background: rgba(46, 125, 50, 0.12);
+  color: var(--ok);
+  border-color: rgba(46, 125, 50, 0.24);
+}
+
+.verdict-badge.maybe {
+  background: rgba(199, 119, 0, 0.14);
+  color: var(--current);
+  border-color: rgba(199, 119, 0, 0.28);
+}
+
+.verdict-badge.no-go,
+.verdict-badge.idle {
+  background: rgba(90, 101, 91, 0.12);
+  color: var(--muted);
+  border-color: rgba(90, 101, 91, 0.2);
 }
 
 .project-card.active {
@@ -253,6 +364,7 @@ button:disabled {
     grid-template-columns: 1fr;
     grid-template-areas:
       "hero"
+      "verdict"
       "progress"
       "plan"
       "side"
@@ -263,6 +375,11 @@ button:disabled {
   .hero {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .hero-steps,
+  .score-grid {
+    grid-template-columns: 1fr;
   }
 }
 

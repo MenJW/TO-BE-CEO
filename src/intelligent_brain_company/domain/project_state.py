@@ -11,6 +11,7 @@ from intelligent_brain_company.domain.models import (
     Department,
     DepartmentSolution,
     IdeaBrief,
+    PlanScorecard,
     ProjectPlan,
     ResearchAssessment,
     RoundtableReview,
@@ -37,6 +38,7 @@ def serialize_project_plan(plan: ProjectPlan) -> dict[str, Any]:
             for department, solution in plan.selected_solutions.items()
         },
         "board_decision": asdict(plan.board_decision),
+        "scorecard": asdict(plan.scorecard) if plan.scorecard else None,
         "interventions": [asdict(item) for item in plan.interventions],
     }
 
@@ -80,6 +82,7 @@ def deserialize_project_plan(data: dict[str, Any]) -> ProjectPlan:
             for department, solution in data.get("selected_solutions", {}).items()
         },
         board_decision=BoardDecision(**data["board_decision"]),
+        scorecard=PlanScorecard(**data["scorecard"]) if data.get("scorecard") else None,
         interventions=[
             UserIntervention(
                 stage=Stage(item["stage"]),

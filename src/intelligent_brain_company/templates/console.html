@@ -33,20 +33,47 @@
           <button type="submit" class="primary-button">创建项目</button>
         </form>
 
+        <div class="list-header">一键体验 Demo</div>
+        <div class="demo-caption">直接加载一个真实创业场景，自动生成第一版计划。</div>
+        <div id="demo-project-list" class="demo-project-list"></div>
+
         <div class="list-header">项目列表</div>
         <div id="project-list" class="project-list"></div>
       </aside>
 
       <main class="main-grid">
         <section class="hero panel">
-          <div>
+          <div class="hero-copy">
             <div class="eyebrow">Live Board</div>
             <h2 id="project-name">选择一个项目</h2>
             <p id="project-meta" class="muted">创建后可生成计划、提交干预、查看阶段进度与版本差异。</p>
+            <div class="hero-steps">
+              <div class="hero-step">
+                <strong>1. 输入 Idea</strong>
+                <span>输入产品想法、约束和成功指标。</span>
+              </div>
+              <div class="hero-step">
+                <strong>2. AI 公司协作</strong>
+                <span>研究组、部门和董事会生成结构化结论。</span>
+              </div>
+              <div class="hero-step">
+                <strong>3. 输出可执行建议</strong>
+                <span>得到 Go/Maybe/No-Go、阶段进度、Diff 和可追问结果。</span>
+              </div>
+            </div>
           </div>
           <div class="hero-actions">
             <button id="generate-plan" class="primary-button" disabled>生成计划</button>
           </div>
+        </section>
+
+        <section class="panel verdict-panel">
+          <div class="section-head">
+            <h3>执行判断</h3>
+            <div id="verdict-badge" class="verdict-badge idle">等待生成</div>
+          </div>
+          <p id="verdict-summary" class="muted">生成计划后，这里会显示一个更像创业评审会的综合判断。</p>
+          <div id="score-grid" class="score-grid"></div>
         </section>
 
         <section class="panel progress-panel">

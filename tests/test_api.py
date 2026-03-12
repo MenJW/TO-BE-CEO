@@ -34,6 +34,7 @@ def test_create_project_and_generate_plan(tmp_path: Path) -> None:
     payload = generation.get_json()["data"]
     assert payload["task"]["status"] == "completed"
     assert payload["project"]["latest_plan_markdown"]
+    assert payload["project"]["latest_plan"]["scorecard"]["recommendation"] in {"Go", "Maybe", "No-Go"}
 
 
 def test_intervention_creates_new_plan_version(tmp_path: Path) -> None:
@@ -98,6 +99,7 @@ def test_console_page_is_served(tmp_path: Path) -> None:
     response = client.get("/")
     assert response.status_code == 200
     assert b"Intelligent Brain Company" in response.data
+    assert "一键体验 Demo".encode("utf-8") in response.data
 
 
 def test_chat_endpoint_persists_history(tmp_path: Path) -> None:

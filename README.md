@@ -1,16 +1,40 @@
 # Intelligent Brain Company
 
-Intelligent Brain Company is an AI-native venture studio framework. It turns a user idea into a company-style planning workflow: research team, domain departments, cross-functional reviews, board decision, and a final execution plan.
+Intelligent Brain Company is an AI startup simulator: you submit one idea, an AI company evaluates it through research, departments, and board review, and you get a structured go or no-go plan instead of a single chat reply.
 
-This repository now contains the first project skeleton for that vision: a clear domain model, a deterministic MVP workflow, a CLI entry point, and planning documents for the next implementation stages.
+This repository is now usable as a demo product rather than only a concept scaffold. It includes a web console, SQLite-backed project history, plan version diff, direct chat with departments, and a promote-to-intervention loop that turns a conversation turn into a formal change request and triggers recomputation.
 
-It now also includes a minimal backend service with project persistence and HTTP APIs, so the next step can be a real product console rather than a standalone script.
+Research, board, and department stages can call a real OpenAI-compatible endpoint when configured. Without credentials, the app falls back to deterministic local generation so the full loop still runs end to end.
 
-Research and board stages can now use a real OpenAI-compatible LLM endpoint when configured; without credentials, the system falls back to deterministic local generation.
+Hardware, software, design, marketing, and finance outputs are generated against explicit JSON contracts, so the result is closer to a cross-functional planning board than a loose role-play prompt.
 
-Hardware, software, design, marketing, and finance departments now also support structured LLM generation through explicit JSON contracts, and the console includes a direct chat panel for talking to research, board, or department agents.
+## What You See In 30 Seconds
 
-Project, task, timeline, chat, and version data are now persisted in SQLite instead of per-file JSON blobs.
+Input:
+
+- One startup or product idea.
+- A few constraints such as budget, launch speed, or target market.
+
+Workflow:
+
+1. Research evaluates demand, competition, and risk.
+2. Departments propose concrete options with structured artifacts.
+3. The board returns a recommendation and conditions.
+4. You can chat with any role and promote a message into a formal intervention.
+
+Output:
+
+- A Go, Maybe, or No-Go verdict.
+- A five-dimension scorecard: market demand, technical feasibility, execution complexity, time to MVP, monetization potential.
+- Department plans with artifacts such as BOM targets, software boundaries, design constraints, channel budget, and capital envelope.
+- Timeline, revision history, and markdown diff between plan versions.
+
+## Why This Is Different From A Normal LLM Chat
+
+- It keeps project state instead of producing one-off replies.
+- It separates research, departments, and board review into explicit stages.
+- It supports human intervention in the middle of the workflow, then recomputes downstream outputs.
+- It stores versions, chat turns, and timeline events in SQLite so the demo remains auditable.
 
 ## Why This Project
 
@@ -28,15 +52,16 @@ The core product thesis is:
 
 ## MVP Scope
 
-The current scaffold focuses on the smallest useful end-to-end slice:
+The current build focuses on the smallest useful end-to-end slice that a new user can understand and try immediately:
 
 - Domain objects for ideas, solutions, reviews, board decisions, and user interventions.
 - A company pipeline that simulates the full planning process.
 - Department registry for research, hardware, software, design, marketing, and finance.
 - Structured JSON contracts for department solution generation.
 - A CLI command that turns an idea into a structured draft plan.
-- A Flask API for creating projects, generating plans, and recording interventions.
+- A Flask API for creating projects, generating plans, chatting with roles, and recording interventions.
 - A chat API and console panel for direct conversation with research, board, and department agents.
+- A verdict scorecard with Go, Maybe, or No-Go output.
 - SQLite-backed persistence for project state, task history, versions, and chat records.
 - Documentation for execution roadmap and license strategy.
 
@@ -106,7 +131,22 @@ Example flow:
 
 Open the control surface at http://127.0.0.1:8000 to create projects, view plans, inspect timeline and progress, and submit interventions.
 
-The console also exposes a conversation panel where you can directly talk to research, board, hardware, software, design, marketing, or finance.
+The console also exposes:
+
+- three one-click demo startup ideas for a fast first run,
+- a verdict scorecard for immediate Go or No-Go comprehension,
+- a conversation panel where you can directly talk to research, board, hardware, software, design, marketing, or finance,
+- a one-click path from chat turn to formal intervention and recomputed plan version.
+
+## Demo Ideas
+
+The built-in console presets are designed to make the product legible within a minute:
+
+1. AI interview coach for new graduates.
+2. Cross-border ecommerce product selection assistant.
+3. Campus second-hand marketplace.
+
+These presets are meant to show the full product loop fast: create project, generate plan, inspect scorecard, question a department, promote a chat turn, and compare versions.
 
 If you want live LLM-backed research, board, and department reviews, set these environment variables before starting the API:
 
